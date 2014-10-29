@@ -42,6 +42,8 @@ func! s:Initialize()
   let s:highlight_arg = gui_running ? 'guibg' : 'ctermbg'
   let s:oldc = synIDattr(synIDtrans(hlID('CursorLine')), 'bg')
 
+  execute 'highlight SearchPulse '.s:highlight_arg.'=NONE'
+
   if s:oldc == -1
     let s:oldc = 'NONE'
   endif
@@ -91,20 +93,20 @@ func! search_pulse#PulsePattern()
 
   call s:HandleFoldOpening()
 
-  for c in s:iterator
-    let match_id = s:SetPatternColor(c, pattern)
-    redraw
+  let match_id = matchadd('SearchPulse', pattern)
 
-    " In the loop, if a key is pressed,
-    " removes match highlight and break
+  for c in s:iterator
+    " Short circuit if there is 'typeahead'.
     if getchar(1) != 0
-      call matchdelete(match_id)
       break
     endif
 
+    execute 'highlight SearchPulse ' . s:highlight_arg . '=' . c
+    redraw
     execute 'sleep ' . s:sleep . 'm'
-    call matchdelete(match_id)
   endfor
+
+  silent! call matchdelete(match_id)
 endf
 
 func! search_pulse#PulseCursorLine()
@@ -140,12 +142,6 @@ endf
 
 func! s:SetCursorLineColor(c)
   execute 'highlight CursorLine ' . s:highlight_arg . '=' . a:c
-endf
-
-func! s:SetPatternColor(c, pattern)
-  execute 'highlight SearchPulse ' . s:highlight_arg . '=' . a:c
-
-  return matchadd('SearchPulse', a:pattern)
 endf
 
 " If the line has too many characters don't pulse, because it can be slow on
